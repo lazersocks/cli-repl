@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import {
+  LineChart,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Line,
+  CartesianGrid,
+  Legend,
+} from "recharts";
 
 export default function Field() {
   const [isLoading, setIsLoading] = useState(false);
@@ -39,13 +48,14 @@ export default function Field() {
         "Opens the file explorer to allow uploading csv files only to the draw-chart directory.\n",
     },
     {
-      command: "draw [file] [columns]",
+      command: 'draw "[file]" [columns]',
       purpose:
-        "Draws the chart of the specified columns of the file present in the draw-chart directory. Collumns must be seperated by a comma.\n",
+        "Draws the chart of the specified column of the file present in the draw-chart directory. File name must be in double quotes. Column must be in double quotes seperated by a space.\n",
     },
     {
-      command: "delete [file]",
-      purpose: "Deletes the specified file from the draw-chart directory.",
+      command: 'delete "[file]"',
+      purpose:
+        "Deletes the specified file from the draw-chart directory. File name must be in double quotes.\n",
     },
   ];
   //   useEffect(() => {
@@ -202,14 +212,12 @@ export default function Field() {
             hasBuffer: true,
           },
         ]);
-        
       } catch (err) {
         console.log(err);
         setFieldHistory((currentFieldHistory) => [
           ...currentFieldHistory,
           { text: "Error fetching price", isError: true, hasBuffer: true },
         ]);
-        
       }
       setIsLoading(false);
     } else if (cleaned_input[0] === "about") {
@@ -228,7 +236,10 @@ export default function Field() {
         },
       ]);
     } else if (cleaned_input[0] === "delete") {
-      const fileName = input.slice(6).trim();
+      let fileName = input.slice(6).trim();
+      if (fileName.startsWith('"') && fileName.endsWith('"')) {
+        fileName = fileName.slice(1, -1);
+      }
       setIsLoading(true);
       try {
         const res = await axios.delete(
@@ -245,7 +256,122 @@ export default function Field() {
         console.log(err);
         setFieldHistory((currentFieldHistory) => [
           ...currentFieldHistory,
-          { text: err.response.data.message, isError: true, hasBuffer: true },
+          {
+            text: err?.response?.data?.message,
+            isError: true,
+            hasBuffer: true,
+          },
+        ]);
+      }
+      setIsLoading(false);
+    } else if (cleaned_input[0] === "draw") {
+      const draw_regex = /^draw\s+"([^"]+)"((?:\s+"[^"]+")+)$/;
+      let trimmed_input = input.trim();
+      const match = trimmed_input.match(draw_regex);
+      let columns = [];
+      let fileName = "";
+      console.log(fileName);
+      console.log(columns);
+      console.log(input);
+      if (match) {
+        console.log("here");
+        fileName = match[1];
+        const columnsPart = match[2].trim();
+
+        // Extract columns from the remaining part
+        const columnRegex = /"([^"]+)"/g;
+        let columnMatch;
+        while ((columnMatch = columnRegex.exec(columnsPart)) !== null) {
+          columns.push(columnMatch[1]);
+        }
+      }
+      if (!match) {
+        setFieldHistory((currentFieldHistory) => [
+          ...currentFieldHistory,
+          {
+            text: 'Invalid draw command. Please use the format: draw "filename" "column1" "column2"',
+            isError: true,
+            hasBuffer: true,
+          },
+        ]);
+        return;
+      }
+      if (columns.length != 2) {
+        setFieldHistory((currentFieldHistory) => [
+          ...currentFieldHistory,
+          {
+            text: "Draw command must have 2 columns.",
+            isError: true,
+            hasBuffer: true,
+          },
+        ]);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const res = await axios.get(
+          `${import.meta.env.VITE_BACKEND_URL}/file/${fileName}?column_1=${
+            columns[0]
+          }&column_2=${columns[1]}`
+        );
+        console.log(res);
+        const data = res.data.columns;
+        console.log("data", data);
+
+        // const formattedData = data.map(item => ({
+        //   ...item,
+        //   [columns[0]]: item[columns[0]], // Assuming this is the categorical data for XAxis
+        //   [columns[1]]: parseFloat(item[columns[1]]) // Convert YAxis data to numbers
+        // }));
+
+        const chart = (
+          <LineChart
+            width={730}
+            height={400}
+            data={data}
+            margin={{ top: 10, right: 30, left: 20 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              dataKey={columns[0]}
+              label={`${columns[0]}`}
+              textAnchor="end"
+              height={100} 
+              tickMargin={20}
+            />
+            <YAxis
+              dataKey={`${columns[1]}`}
+              label={`${columns[1]}`}
+              width={100}
+            />
+            <Tooltip />
+            <Legend />
+            <Line
+              type="monotone"
+              dataKey={`${columns[1]}`}
+              stroke="#8884d8"
+              dot={false}
+            />
+          </LineChart>
+        );
+        setFieldHistory((currentFieldHistory) => [
+          ...currentFieldHistory,
+          {
+            text: chart,
+            isCommand: false,
+            hasBuffer: true,
+          },
+        ]);
+      } catch (error) {
+        console.log(error);
+        setFieldHistory((currentFieldHistory) => [
+          ...currentFieldHistory,
+          {
+            text: error?.response?.data?.message || "Error drawing chart",
+            isError: true,
+            hasBuffer: true,
+          },
         ]);
       }
       setIsLoading(false);
@@ -303,13 +429,12 @@ export default function Field() {
             hasBuffer: true,
           },
         ]);
-       
+
         event.target.value = null;
       }
       setIsLoading(false);
-      
     }
-    setShowFileInput(false); 
+    setShowFileInput(false);
   };
 
   // async function fetchPrice(pair){
@@ -322,6 +447,7 @@ export default function Field() {
     // Implementation of command execution logic
   };
 
+  //cursor
   const handleContextMenuPaste = (e) => {
     e.preventDefault();
     navigator.clipboard.readText().then((clipboardContent) => {
@@ -329,7 +455,6 @@ export default function Field() {
     });
   };
 
-  //cursor
   const handleFocus = () => {
     setIsCursorBlinking(true);
   };
