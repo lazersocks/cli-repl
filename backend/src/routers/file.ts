@@ -20,7 +20,7 @@ type File = {
 file.post("/", async (c: Context) => {
   const data = await c.req.formData();
   const file: File | any = data.get("file");
-  if (file.size > 100 * 1024 * 1024) {
+  if (file.size > 50 * 1024 * 1024) {
     return c.json(
       {
         message: "File size is too large",
