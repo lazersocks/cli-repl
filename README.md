@@ -44,3 +44,8 @@ The application is split into two main parts:
       ```bash
           npm run dev
       ```
+### Tests
+    ```bash
+          npm run test
+      ```
+
