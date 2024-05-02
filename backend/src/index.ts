@@ -2,6 +2,13 @@ import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from "hono/cors";
 import file from "./routers/file";
+import { existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
+
+const drawChartPath = join(__dirname, '..', 'draw-chart');
+if (!existsSync(drawChartPath)) {
+  mkdirSync(drawChartPath, { recursive: true });
+}
 
 export const app = new Hono().basePath("/api");
 
