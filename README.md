@@ -19,14 +19,14 @@ This project provides a terminal-like interface built with React, utilizing a li
 
 #### Component Design
 
-- **Field Component**: Acts as the core of the terminal interface, using a React Fragment to render the history of command outputs, thus simulating a terminal-like feel. The component uses React's `useState` hooks to manage the history of commands and the output displayed to the user.
+- **Field Component**: Acts as the core of the terminal interface, using react's Fragment to render the history of command outputs, thus simulating a terminal-like feel. The component uses React's `useState` hooks to manage the history of commands and display the output to the user. For complex commands like draw-chart, I have used regex to parse the input in a specified format. I have allowed only two columns to be included in the chart for better results.
 
 ## Architecture
 
 The application is split into two main parts:
 
-1. **Backend (Server)**: Handles API requests, file operations, and serves as the interface between the frontend and the filesystem or external APIs.
-2. **Frontend (Client)**: Provides the user interface, handles user input, and displays responses from the server.
+1. **Backend (Server)**: Handles API requests, file operations, and serves as the interface between the frontend and the filesystem.
+2. **Frontend (Client)**: Provides the user interface, handles user input, used to make external API call and display responses from the server.
 
 ## How to Run the Code
 
