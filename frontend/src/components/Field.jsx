@@ -50,7 +50,7 @@ export default function Field() {
     {
       command: 'draw "[file]" "[columns]"',
       purpose:
-        "Draws the chart of the specified column of the file present in the draw-chart directory. File name must be in double quotes. Column must be in double quotes seperated by a space.\n",
+        "Draws the chart of the specified column of the file present in the draw-chart directory. File name must be in double quotes. Column must be in double quotes seperated by a space e.g. draw-chart \"Solana.csv\" \"Date\" \"Price\".\n",
     },
     {
       command: 'delete "[file]"',
@@ -340,6 +340,15 @@ export default function Field() {
         ]);
       }
       setIsLoading(false);
+    }else {
+      setFieldHistory((currentFieldHistory) => [
+        ...currentFieldHistory,
+         {
+           text: "Invalid command",
+           isError: true,
+           hasBuffer: true,
+         },
+       ]);
     }
   };
 
