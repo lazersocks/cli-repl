@@ -26,13 +26,13 @@ export default function Field() {
   const [commandHistory, setCommandHistory] = useState([]); // history of commands entered
   const [commandHistoryIndex, setCommandHistoryIndex] = useState(0);
   //ref
-  const fieldRef = useRef(null);
+  const fieldRef = useRef(null); //for auto scrolling down
   const fileInputRef = useRef(null);
 
   const helpCommands = [
     {
       command: "help",
-      purpose: "Provides help information for React Terminal commands.\n",
+      purpose: "Provides help information for terminal commands.\n",
     },
     {
       command: "about",
@@ -48,7 +48,7 @@ export default function Field() {
         "Opens the file explorer to allow uploading csv files only to the draw-chart directory.\n",
     },
     {
-      command: 'draw "[file]" [columns]',
+      command: 'draw "[file]" "[columns]"',
       purpose:
         "Draws the chart of the specified column of the file present in the draw-chart directory. File name must be in double quotes. Column must be in double quotes seperated by a space.\n",
     },
@@ -57,42 +57,11 @@ export default function Field() {
       purpose:
         "Deletes the specified file from the draw-chart directory. File name must be in double quotes.\n",
     },
+    {
+    command: "Arrow Keys",
+    purpose: "Navigate through the command history.\n",
+    }
   ];
-  //   useEffect(() => {
-  //     if (
-  //       typeof window.orientation !== "undefined" ||
-  //       navigator.userAgent.indexOf("IEMobile") !== -1
-  //     ) {
-  //       setIsMobile(true);
-  //       setFieldHistory((currentFieldHistory) => [
-  //         ...currentFieldHistory,
-  //         { isCommand: true },
-  //         {
-  //           text: 'Unfortunately due to this application being an "input-less" environment, mobile is not supported. Please use a desktop.',
-  //           isError: true,
-  //           hasBuffer: true,
-  //         },
-  //       ]);
-  //     }
-
-  //     const handleClick = () => {
-  //       setFieldHistory((currentFieldHistory) => [
-  //         ...currentFieldHistory,
-  //         { isCommand: true },
-  //         { text: "SYS >> That button doesn't do anything.", hasBuffer: true },
-  //       ]);
-  //     };
-
-  //     document
-  //       .querySelector("#useless-btn")
-  //       .addEventListener("click", handleClick);
-
-  //     return () => {
-  //       document
-  //         .querySelector("#useless-btn")
-  //         .removeEventListener("click", handleClick);
-  //     };
-  //   }, []);
 
   useEffect(() => {
     if (fieldRef.current) {
@@ -278,7 +247,7 @@ export default function Field() {
         fileName = match[1];
         const columnsPart = match[2].trim();
 
-        // Extract columns from the remaining part
+        //extractin columns 
         const columnRegex = /"([^"]+)"/g;
         let columnMatch;
         while ((columnMatch = columnRegex.exec(columnsPart)) !== null) {
@@ -310,20 +279,16 @@ export default function Field() {
 
       setIsLoading(true);
       try {
-        const res = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/file/${fileName}?column_1=${
-            columns[0]
-          }&column_2=${columns[1]}`
+        const res = await axios.post(
+          `${import.meta.env.VITE_BACKEND_URL}/file/${fileName}`,
+          {
+            column_1: columns[0],
+            column_2: columns[1],
+          }
         );
         console.log(res);
         const data = res.data.columns;
         console.log("data", data);
-
-        // const formattedData = data.map(item => ({
-        //   ...item,
-        //   [columns[0]]: item[columns[0]], // Assuming this is the categorical data for XAxis
-        //   [columns[1]]: parseFloat(item[columns[1]]) // Convert YAxis data to numbers
-        // }));
 
         const chart = (
           <LineChart
@@ -435,16 +400,6 @@ export default function Field() {
       setIsLoading(false);
     }
     setShowFileInput(false);
-  };
-
-  // async function fetchPrice(pair){
-  //   const res = await axios.get(`https://api.binance.com/api/v3/avgPrice?symbol=${pair}`)
-  //   console.log(res)
-  //   const price = res.data.price
-  //   return price
-  // }
-  const handleInputExecution = (cmd, params, flags) => {
-    // Implementation of command execution logic
   };
 
   //cursor

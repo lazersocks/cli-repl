@@ -1,6 +1,6 @@
 import { Context, Hono } from "hono";
 import { writeFile, unlink } from "fs/promises";
-import { createReadStream, fstat } from "fs";
+import { createReadStream, existsSync } from "fs";
 import csvParser from "csv-parser";
 import path from "path";
 
@@ -29,19 +29,15 @@ file.post("/", async (c: Context) => {
     );
   }
   let arrayBuffer = await file.arrayBuffer();
-  console.log("arrayBuffer", arrayBuffer);
 
-  if (
-    arrayBuffer[0] === 0xef &&
-    arrayBuffer[1] === 0xbb &&
-    arrayBuffer[2] === 0xbf
-  ) {
-    arrayBuffer = arrayBuffer.slice(3);
-  }
-  const fileBuffer = Buffer.from(await file.arrayBuffer());
-  // Check for BOM (Byte Order Mark) and remove it if present
-
-  console.log("fileBuffer", fileBuffer, "");
+  // if (
+  //   arrayBuffer[0] === 0xef &&
+  //   arrayBuffer[1] === 0xbb &&
+  //   arrayBuffer[2] === 0xbf
+  // ) {
+  //   arrayBuffer = arrayBuffer.slice(3);
+  // }
+  const fileBuffer = Buffer.from(arrayBuffer);
   const filePath = path.resolve(__dirname, "../../draw-chart", file.name);
   await writeFile(filePath, fileBuffer, "utf-8");
 
@@ -53,29 +49,30 @@ file.post("/", async (c: Context) => {
 type ColumnData = {
   [key: string]: string;
 };
-// {
-//   mapHeaders: ({ header }) => {
-//    if  (header.includes(column_1)){
-//      return column_1
-//    }else if (header.includes(column_2)){
-//      return column_2
-//    }else{
-//      return header
-//    }
-//   }
-// draw "Solana Historical Data.csv" "Price" "Date"
-
-file.get("/:file", async (c: Context) => {
+// draw "Solana Historical Data.csv" "Date" "Price"
+//draw endpoint
+file.post("/:file", async (c: Context) => {
   try {
-    const { file } = c.req.param();
-    const params = c.req.query();
+    let { file } = c.req.param();
+    const params = await c.req.json();
     const { column_1, column_2 } = params as {
       column_1: string;
       column_2: string;
     };
+    //if file doesnt have .csv extension add it
+    if (!file.endsWith(".csv")) {
+      file = file + ".csv";
+    }
+    console.log("file", file);
     const filePath = path.resolve(__dirname, "../../draw-chart", file);
-    console.log("filePath", filePath);
-    console.log("colums: ", column_1, column_2);
+    if (!existsSync(filePath)) {
+      return c.json(
+        {
+          message: "File does not exist.",
+        },
+        404
+      );
+    }
     const columns: ColumnData[] = [];
 
     const return_columns = await new Promise((resolve, reject) => {
@@ -83,13 +80,15 @@ file.get("/:file", async (c: Context) => {
         .pipe(
           csvParser({
             mapHeaders: ({ header }) => {
-              console.log("header", header);
-              if (header.startsWith("\uFEFF")) { //dealing with BOM caused by utf-8 encoding
+              
+              if (header.startsWith("\uFEFF")) {
+                //dealing with BOM caused by utf-8 encoding
                 header = header.slice(1);
                 if (header.startsWith('"') && header.endsWith('"')) {
                   header = header.slice(1, -1);
                 }
               }
+              console.log("header", header);
               return header;
             },
           })
@@ -97,20 +96,20 @@ file.get("/:file", async (c: Context) => {
         .on("data", (data: any) => {
           // console.log("data",typeof data)
 
-          // console.log("data",data, data.hasOwnProperty(column_1), data.hasOwnProperty(column_2))
+          //  console.log("data",data, data.hasOwnProperty(column_1), data.hasOwnProperty(column_2))
           if (data.hasOwnProperty(column_1) && data.hasOwnProperty(column_2)) {
-            const y_axis = parseFloat(data[column_2]) ? parseFloat(data[column_2]) : data[column_2] //should be a value
-            console.log("y_axis", y_axis);
+            const y_axis = parseFloat(data[column_2])
+              ? parseFloat(data[column_2])
+              : data[column_2]; //should be a value to allow the chart to scale
             columns.push({
               [column_1]: data[column_1],
               [column_2]: y_axis,
             });
           } else {
-            stream.destroy(new Error("Column not found"));
+            stream.destroy(new Error("Column not found."));
           }
         })
         .on("end", () => {
-          console.log("end");
           resolve(columns);
         })
         .on("error", (error: any) => {
@@ -120,11 +119,11 @@ file.get("/:file", async (c: Context) => {
     });
 
     return c.json({
-      message: "Columns parsed",
+      message: "Columns parsed.",
       columns: return_columns,
     });
   } catch (error: any) {
-    console.log("error", error);
+    console.log("in catch error", error);
     return c.json(
       {
         message: error.message,
@@ -136,10 +135,19 @@ file.get("/:file", async (c: Context) => {
 
 file.delete("/:file", async (c: Context) => {
   try {
-    const { file } = c.req.param();
-    console.log("file", file);
+    let { file } = c.req.param();
+    if (!file.endsWith(".csv")) {
+      file = file + ".csv";
+    }
     const filePath = path.resolve(__dirname, "../../draw-chart", file);
-    console.log("filePath", filePath);
+    if (!existsSync(filePath)) {
+      return c.json(
+        {
+          message: "File does not exist.",
+        },
+        404
+      );
+    }
 
     await unlink(filePath);
     return c.json({
